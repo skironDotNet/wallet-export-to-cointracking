@@ -20,8 +20,14 @@
 } */
 
 table.donate {
-  margin-bottom: 100px; /* fit QR under */
+  margin-bottom: 110px; /* fit QR under */
   background-color: whitesmoke;
+}
+
+.page {
+  background-color: whitesmoke;
+  padding: 10px;
+  border-radius: 5px;
 }
 
 /*** Coin sprites - thanks to https://spritegen.website-performance.org/ ***/
