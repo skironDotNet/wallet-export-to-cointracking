@@ -45,7 +45,6 @@ var fileTypeMatch = new RegExp(
 );
 
 var csvDialect = {
-  dialect: {
     csvddfVersion: 1.2,
     delimiter: ",",
     doubleQuote: true,
@@ -53,7 +52,6 @@ var csvDialect = {
     quoteChar: '"',
     skipInitialSpace: true,
     header: true
-  }
 };
 
 var coinCode = null;
