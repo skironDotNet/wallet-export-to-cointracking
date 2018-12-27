@@ -217,7 +217,8 @@ function setMiningOrBasisZero(ctLine, amount) {
 }
 
 function getFileName(coinCode, walletName) {
-  let dt = new Date(Date.now());
+  let tzoffset = (new Date()).getTimezoneOffset() * 60000; 
+  let dt = new Date(Date.now() - tzoffset);
   let dtString = dt
     .toISOString()
     .replace(/:/g, "-")
