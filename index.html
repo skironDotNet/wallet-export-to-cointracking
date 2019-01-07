@@ -33,7 +33,7 @@
 					</div>
 				</div>
 				<div class="grid-50 text-center">
-					<div class="text-logo">Crypto Wallet to CoinTracking</div>v1.2.0
+					<div class="text-logo">Crypto Wallet to CoinTracking</div>v1.2.1
 				</div>
 				<div class="grid-25 mobile-grid-50 text-right">
 					<div class="links">
@@ -72,10 +72,16 @@
 						<dfn>You must provide your own wallet name how it's going to appear in CoinTracking</dfn>
 					</label>
 
-					<label>
-						<input type="checkbox" id="costBasisZero"> Declare mining as cost basis zero
-						<dfn>You can use this to override default type "Mining" to cost basis zero transaction</dfn>
-					</label>
+					<div>
+						<label>
+							<input type="checkbox" id="costBasisZero"> Declare mining as cost basis zero
+							<dfn>You can use this to override default type "Mining" to cost basis zero transaction, <b>but this is not recomended</b></dfn>
+						</label>
+						<a class="more-details">more details</a>
+					</div>
+					<div class="explain">I most countries mining is taxable income, and if you still want to override this, you can use filter at CoinTracking Report page:<br> 
+						<img src="images/how-to2.png" style="border: 1px solid gray">
+					</div>
 
 					<label id="fiatUI" class="hidden">
 						Home Currency:
