@@ -9,7 +9,8 @@ var ctCsvHeader = [
   "Exchange",
   "Group",
   "Comment",
-  "Date"
+  "Date",
+  "Trade ID",
 ];
 
 var ctField = {
@@ -23,7 +24,8 @@ var ctField = {
   Exchange: 7,
   Group: 8,
   Comment: 9,
-  Date: 10
+  Date: 10,
+  TxID: 11,
 };
 
 var ctTransactionType = {
@@ -142,10 +144,11 @@ function convert(dataset) {
 }
 
 function convertRow(row) {
-  let ctLine = ["", "", "", "", "", "", "", "", "", "", ""];
+  let ctLine = ["", "", "", "", "", "", "", "", "", "", "", ""];
 
   ctLine[ctField.Date] = row[1].replace("T", " ");
   ctLine[ctField.Exchange] = walletName;
+  ctLine[ctField.TxID] = row[6];
 
   let amount = row[5].replace("-", "");
   let label = row[3];
