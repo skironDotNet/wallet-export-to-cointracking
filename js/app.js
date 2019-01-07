@@ -36,7 +36,8 @@ var ctTransactionType = {
   Mining: "Mining",
   Stolen: "Stolen",
   Trade: "Trade",
-  Withdrawal: "Withdrawal"
+  Withdrawal: "Withdrawal",
+  Spend: "Spend",
 };
 
 var fileTypeMatch = new RegExp(
@@ -172,7 +173,7 @@ function convertRow(row) {
       ctLine[ctField.BuyCurrency] = coinCode;
       break;
     case "payment to yourself":
-      ctLine[ctField.Type] = ctTransactionType.Withdrawal;
+      ctLine[ctField.Type] = ctTransactionType.Spend;
       ctLine[ctField.Sell] = amount;
       ctLine[ctField.SellCurrency] = coinCode;
       ctLine[ctField.Fee] = amount;
