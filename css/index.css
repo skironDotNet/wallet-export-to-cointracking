@@ -128,3 +128,18 @@ li {
     color: #fff;
   }
 }
+
+.more-details {
+  font-size: 12px;
+  display: inline;
+  position: relative;
+  top: -20px;
+  padding-left: 22px;
+}
+
+.explain {
+  font-size: 14px;
+  line-height: 1.5em;
+  display: none;
+  margin-bottom: 30px; 
+}

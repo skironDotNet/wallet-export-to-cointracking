@@ -69,6 +69,17 @@ $(function() {
   hideDownload();
   setCoinCode("");
 
+  let isHidden = false;
+  $('.more-details').click(() => {
+    $('.explain').toggle();
+    isHidden = !isHidden;
+    if (isHidden) {
+      $('.more-details').text('hide');
+    } else {
+      $('.more-details').text('more details');
+    }
+  });
+  
   $("#costBasisZero").change(() => {
     $("#fiatUI").toggle($("#costBasisZero").prop("checked"));
   });
