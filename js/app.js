@@ -123,6 +123,9 @@ $(function() {
       let csvObject = convert(dataset);
       //console.log(csvObject);
       let csvData = CSV.serialize(csvObject, csvDialect);
+      
+      csvData = csvData.substring(0, csvData.length - csvDialect.lineTerminator.length); //remove last line, this is a fix cointracking CSV parser bug. It may introduce a bug if they change to require last empty line
+
       //console.log(csvData);
       showDownload(getFileName(coinCode, walletName), csvData);
     });
