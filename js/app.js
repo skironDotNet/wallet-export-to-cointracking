@@ -131,10 +131,10 @@ $(function() {
       file: file
     }).done(function(dataset) {
       //consoleconsole.log(dataset);
-      let csvObject = convert(dataset);
+      let csvObject = convert(dataset, true);
       //console.log(csvObject);
       let csvData = CSV.serialize(csvObject, csvDialect);
-      
+
       csvData = csvData.substring(0, csvData.length - csvDialect.lineTerminator.length); //remove last line, this is a fix cointracking CSV parser bug. It may introduce a bug if they change to require last empty line
 
       //console.log(csvData);
@@ -143,27 +143,48 @@ $(function() {
   });
 });
 
-function convert(dataset) {
+function convert(dataset, groupByDay) {
   let csvObject = [ctCsvHeader];
-  let i, c;
-  c = 1;
+  let i;
+  let map = new Map();
+
   for (i = 0; i < dataset.records.length; i++) {
     let row = dataset.records[i];
     if (row[0] == "false") continue;
-    let line = convertRow(row);
-    csvObject[c] = line;
-    c++;
+    let line = convertRow(row, groupByDay, map);
+    if (line){
+      csvObject.push(line);
+    }
   }
+
+  if (groupByDay){
+    for (var [key, line] of  map) {
+      line[ctField.TxID] = getFakeTxId(line.toString(), key);
+      csvObject.push(line);
+    }
+  }
+
   return csvObject;
 }
 
-function convertRow(row) {
+function getFakeTxId(str, date) {
+  var hash = 0, i, chr;
+  if (str.length === 0) return hash;
+  for (i = 0; i < str.length; i++) {
+    chr   = str.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return 'computedID:' + hash + '-' + date;
+};
+
+function convertRow(row, groupByDay, map) {
   let ctLine = ["", "", "", "", "", "", "", "", "", "", "", ""];
 
-  ctLine[ctField.Date] = row[1].replace("T", " ");
   ctLine[ctField.Exchange] = walletName;
+  ctLine[ctField.Date] = row[1].replace("T", " ");
   ctLine[ctField.TxID] = row[6];
-
+  let date =  row[1].split("T")[0];
   let amount = row[5].replace("-", "");
   let label = row[3];
 
@@ -172,8 +193,6 @@ function convertRow(row) {
       ctLine[ctField.Type] = ctTransactionType.Withdrawal;
       ctLine[ctField.Sell] = amount;
       ctLine[ctField.SellCurrency] = coinCode;
-      //ctLine[ctField.Fee] = 0.00000001;       //could use this to keep coin symbol enetered in CT, potential simplification but 1 sat fee could be confusing
-      //ctLine[ctField.FeeCurrency] = coinCode;
       ctLine[
         ctField.Comment
       ] = `You must update the fee based on deposit amount from this withdrawal! Sent to: ${label}`;
@@ -182,7 +201,7 @@ function convertRow(row) {
     case "mined":
     case "mining":
     case "masternode reward":
-      setMiningOrBasisZero(ctLine, amount);
+      ctLine = formatMiningLineOrMap(ctLine, amount, date, groupByDay, map);
       break;
     case "received with":
       ctLine[ctField.Type] = ctTransactionType.Deposit;
@@ -199,7 +218,7 @@ function convertRow(row) {
       break;
     default:
       if (row[2].toLowerCase().includes("stake")) {
-        setMiningOrBasisZero(ctLine, amount);
+        ctLine = formatMiningLineOrMap(ctLine, amount, date, groupByDay, map);
       } else {
         ctLine[ctField.Type] = ctTransactionType.Trade;
         ctLine[ctField.Buy] = amount;
@@ -220,22 +239,36 @@ function setCoinCode(coinCode) {
   $("#coinCode").val(coinCode);
 }
 
-function setMiningOrBasisZero(ctLine, amount) {
+function formatMiningLineOrMap(ctLine, amount, date, groupByDay, map) {
+  ctLine[ctField.Buy] = amount;
+  ctLine[ctField.BuyCurrency] = coinCode;
+  ctLine[ctField.Type] = ctTransactionType.Mining;
+
   if (isCostBasisZero) {
     ctLine[ctField.Type] = ctTransactionType.Trade;
-    ctLine[ctField.Buy] = amount;
-    ctLine[ctField.BuyCurrency] = coinCode;
     ctLine[ctField.Sell] = 0;
     ctLine[ctField.SellCurrency] = homeFiatCurrency;
-  } else {
-    ctLine[ctField.Type] = ctTransactionType.Mining;
-    ctLine[ctField.Buy] = amount;
-    ctLine[ctField.BuyCurrency] = coinCode;
   }
+
+  if (groupByDay){
+    ctLine[ctField.TxID] = ''; //reset ID to assure same hash in case of a shift in row processing
+    ctLine[ctField.Date] = date;
+
+    if (map.has(date))
+    {
+      ctLine = map.get(date);
+      ctLine[ctField.Buy] = eval(ctLine[ctField.Buy]) + eval(amount);
+    }
+
+    map.set(date, ctLine);
+    ctLine = null;
+  }
+  
+  return ctLine;
 }
 
 function getFileName(coinCode, walletName) {
-  let tzoffset = (new Date()).getTimezoneOffset() * 60000; 
+  let tzoffset = (new Date()).getTimezoneOffset() * 60000;
   let dt = new Date(Date.now() - tzoffset);
   let dtString = dt
     .toISOString()
