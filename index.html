@@ -33,7 +33,7 @@
 					</div>
 				</div>
 				<div class="grid-50 text-center">
-					<div class="text-logo">Crypto Wallet to CoinTracking</div>v1.2.1
+					<div class="text-logo">Crypto Wallet to CoinTracking</div>v2.0.0
 				</div>
 				<div class="grid-25 mobile-grid-50 text-right">
 					<div class="links">
@@ -70,6 +70,12 @@
 						Wallet name:
 						<input type="text" size="20" maxlength="75" placeholder="my-wallet" id="walletName">
 						<dfn>You must provide your own wallet name how it's going to appear in CoinTracking</dfn>
+					</label>
+
+					<label>
+						<input type="checkbox" id="groupMiningByDay"> Sum up mining transactions by day
+						<dfn>For small amounts you can group all transaction into single sum of the day. Should be acceptable by tax authorities, while "compressing" data for CoinTracking.
+							<br>Not recommended for high priced coins with high volume (for this I may develop "group by hour")</dfn>
 					</label>
 
 					<div>
