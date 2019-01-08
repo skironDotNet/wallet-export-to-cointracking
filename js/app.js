@@ -106,6 +106,7 @@ $(function() {
     walletName = $('#walletName').val();
     isCostBasisZero = $('#costBasisZero').prop('checked');
     homeFiatCurrency = $('#homeFiatCurrency').val();
+    groupByDay = $('#groupMiningByDay').prop('checked');
 
     if (!validateInput()) return;
 
@@ -113,7 +114,7 @@ $(function() {
       file: file
     }).done(function(dataset) {
       //consoleconsole.log(dataset);
-      let csvObject = convert(dataset, true);
+      let csvObject = convert(dataset, groupByDay);
       //console.log(csvObject);
       let csvData = CSV.serialize(csvObject, csvDialect);
 
@@ -124,6 +125,10 @@ $(function() {
     });
   });
 });
+
+function setCoinCode(coinCode) {
+  $('#coinCode').val(coinCode);
+}
 
 function convert(dataset, groupByDay) {
   let csvObject = [ctCsvHeader];
@@ -216,12 +221,12 @@ function convertRow(row, groupByDay, map) {
   return ctLine;
 }
 
-function setCoinCode(coinCode) {
-  $('#coinCode').val(coinCode);
-}
+function fpFix(n) {
+  return Math.round(n * 100000000)/100000000;
+};
 
 function formatMiningLineOrMap(ctLine, amount, date, groupByDay, map) {
-  ctLine[ctField.Buy] = amount;
+  ctLine[ctField.Buy] = eval(amount);
   ctLine[ctField.BuyCurrency] = coinCode;
   ctLine[ctField.Type] = ctTransactionType.Mining;
 
@@ -237,7 +242,9 @@ function formatMiningLineOrMap(ctLine, amount, date, groupByDay, map) {
 
     if (map.has(date)) {
       ctLine = map.get(date);
-      ctLine[ctField.Buy] = eval(ctLine[ctField.Buy]) + eval(amount);
+      //console.log('amount:' + amount +' eval(amount): ' + eval(amount));
+      ctLine[ctField.Buy] = fpFix(ctLine[ctField.Buy] + eval(amount));
+      //console.log('After sum: ' + ctLine[ctField.Buy]);
     }
 
     map.set(date, ctLine);
