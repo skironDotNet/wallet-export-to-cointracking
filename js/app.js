@@ -238,7 +238,7 @@ function formatMiningLineOrMap(ctLine, amount, date, groupByDay, map) {
 
   if (groupByDay) {
     ctLine[ctField.TxID] = ''; //reset ID to assure same hash in case of a shift in row processing
-    ctLine[ctField.Date] = date;
+    ctLine[ctField.Date] = date + ' 23:59:59';
 
     if (map.has(date)) {
       ctLine = map.get(date);
