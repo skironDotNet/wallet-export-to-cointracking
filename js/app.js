@@ -146,7 +146,9 @@ function convert(dataset, groupByDay) {
 
   if (groupByDay) {
     for (var [key, line] of map) {
-      line[ctField.TxID] = getFakeTxId(line.toString(), key);
+      if (line[ctField.TxID] === '') {  //set id only if empty, this means 1+ rows in a day, otherwise keep original TxID since only 1 row that day
+        line[ctField.TxID] = getFakeTxId(line.toString(), key);
+      }
       csvObject.push(line);
     }
   }
@@ -222,8 +224,8 @@ function convertRow(row, groupByDay, map) {
 }
 
 function fpFix(n) {
-  return Math.round(n * 100000000)/100000000;
-};
+  return Math.round(n * 100000000) / 100000000;
+}
 
 function formatMiningLineOrMap(ctLine, amount, date, groupByDay, map) {
   ctLine[ctField.Buy] = eval(amount);
@@ -237,11 +239,10 @@ function formatMiningLineOrMap(ctLine, amount, date, groupByDay, map) {
   }
 
   if (groupByDay) {
-    ctLine[ctField.TxID] = ''; //reset ID to assure same hash in case of a shift in row processing
-    ctLine[ctField.Date] = date + ' 23:59:59';
-
     if (map.has(date)) {
       ctLine = map.get(date);
+      ctLine[ctField.Date] = date + ' 23:59:59'; //this will ovveride only if more that 1 mint a day, otherwise we keep original date for single mint
+      ctLine[ctField.TxID] = ''; //reset ID to assure same hash in case of a shift in row processing
       //console.log('amount:' + amount +' eval(amount): ' + eval(amount));
       ctLine[ctField.Buy] = fpFix(ctLine[ctField.Buy] + eval(amount));
       //console.log('After sum: ' + ctLine[ctField.Buy]);
