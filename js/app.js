@@ -43,6 +43,7 @@ var csvDialect = {
 
 var coinCode = null;
 var walletName = null;
+var ctGroup = null;
 var isCostBasisZero = null;
 var homeFiatCurrency = null;
 var minDataDate = null;
@@ -106,6 +107,7 @@ $(function() {
       .val()
       .toUpperCase();
     walletName = $('#walletName').val();
+    ctGroup = $('#ctGroup').val();
     isCostBasisZero = $('#costBasisZero').prop('checked');
     homeFiatCurrency = $('#homeFiatCurrency').val();
     groupByDay = $('#groupMiningByDay').prop('checked');
@@ -184,9 +186,12 @@ function convertRow(row, groupByDay, map) {
   ctLine[ctField.Exchange] = walletName;
   ctLine[ctField.Date] = row[1].replace('T', ' ');
   ctLine[ctField.TxID] = row[6];
+  ctLine[ctField.Group] = ctGroup;
+
   let date = row[1].split('T')[0];
   let amount = row[5].replace('-', '');
   let label = row[3];
+  let txType = row[2];
 
   let rowDate = new Date(date);
 
@@ -198,7 +203,7 @@ function convertRow(row, groupByDay, map) {
     maxDataDate = rowDate;
   }
 
-  switch (row[2].toLowerCase()) {
+  switch (txType.toLowerCase()) {
     case 'sent to':
       ctLine[ctField.Type] = ctTransactionType.Withdrawal;
       ctLine[ctField.Sell] = amount;
@@ -225,7 +230,7 @@ function convertRow(row, groupByDay, map) {
       ctLine[ctField.Comment] = 'Payment to yourself';
       break;
     default:
-      if (row[2].toLowerCase().includes('stake')) {
+      if (txType.toLowerCase().includes('stake')) {
         ctLine = formatMiningLineOrMap(ctLine, amount, date, groupByDay, map);
       } else {
         ctLine[ctField.Type] = ctTransactionType.Trade;
@@ -233,8 +238,7 @@ function convertRow(row, groupByDay, map) {
         ctLine[ctField.BuyCurrency] = coinCode;
         ctLine[ctField.Sell] = amount;
         ctLine[ctField.SellCurrency] = coinCode;
-        ctLine[ctField.Group] = row[2];
-        ctLine[ctField.Comment] = 'Unknown type in export file. Please revise this!';
+        ctLine[ctField.Comment] = 'Unknown type: ' + txType + ' in export file. Please revise this!';
       }
       break;
   }
