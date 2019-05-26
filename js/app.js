@@ -45,6 +45,8 @@ var coinCode = null;
 var walletName = null;
 var isCostBasisZero = null;
 var homeFiatCurrency = null;
+var minDataDate = null;
+var maxDataDate = null;
 var file = {};
 
 $(function() {
@@ -110,6 +112,8 @@ $(function() {
 
     if (!validateInput()) return;
 
+    resetDateDates();
+
     CSV.fetch({
       file: file
     }).done(function(dataset) {
@@ -125,6 +129,11 @@ $(function() {
     });
   });
 });
+
+function resetDateDates() {
+  minDataDate = new Date('2199-01-01'); //I won't live longer than 2085 :)
+  maxDataDate = new Date('2000-01-01'); //crypto didn't exists before 2007
+}
 
 function setCoinCode(coinCode) {
   $('#coinCode').val(coinCode);
@@ -178,6 +187,16 @@ function convertRow(row, groupByDay, map) {
   let date = row[1].split('T')[0];
   let amount = row[5].replace('-', '');
   let label = row[3];
+
+  let rowDate = new Date(date);
+
+  if (minDataDate > rowDate) {
+    minDataDate = rowDate;
+  }
+
+  if (maxDataDate < rowDate) {
+    maxDataDate = rowDate;
+  }
 
   switch (row[2].toLowerCase()) {
     case 'sent to':
@@ -256,14 +275,10 @@ function formatMiningLineOrMap(ctLine, amount, date, groupByDay, map) {
 }
 
 function getFileName(coinCode, walletName) {
-  let tzoffset = new Date().getTimezoneOffset() * 60000;
-  let dt = new Date(Date.now() - tzoffset);
-  let dtString = dt
-    .toISOString()
-    .replace(/:/g, '-')
-    .replace(/\..*$/, '');
+  let minDate = minDataDate.toISOString().split('T')[0];
+  let maxDate = maxDataDate.toISOString().split('T')[0];
 
-  let fullName = walletName + '-' + coinCode + '-to-cointracking-' + dtString + '.csv';
+  let fullName = walletName + '-' + coinCode + '-to-cointracking-' + minDate + '--' + maxDate + '.csv';
   return fullName.toLowerCase();
 }
 
