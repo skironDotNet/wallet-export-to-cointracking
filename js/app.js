@@ -208,6 +208,8 @@ function convertRow(row, groupByDay, map) {
       ctLine[ctField.Type] = ctTransactionType.Withdrawal;
       ctLine[ctField.Sell] = amount;
       ctLine[ctField.SellCurrency] = coinCode;
+      ctLine[ctField.Fee] = '0.00000001'; //the only way to keep currency code in CT is to have some amount, so again decided to put 1 sat to make editing faster by having fee coin code ready
+      ctLine[ctField.FeeCurrency] = coinCode;
       ctLine[ctField.Comment] = `You must update the fee based on deposit amount from this withdrawal! Sent to: ${label}`;
       break;
     case 'minted':
