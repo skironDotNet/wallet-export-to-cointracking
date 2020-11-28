@@ -252,14 +252,21 @@ function addDeposit(inputRow, csvObject) {
 }
 
 function addWithdawalCtLine(inputRow, csvObject) {
+  /* Withdrawal TX */
   let ctLine = getBaseCtLine(inputRow);
   let label = inputRow[3];
   ctLine[ctField.Type] = ctTransactionType.Withdrawal;
-  ctLine[ctField.Sell] = getAmount(inputRow);
+  ctLine[ctField.Sell] = Math.trunc(getAmount(inputRow));
   ctLine[ctField.SellCurrency] = _coinCode;
-  ctLine[ctField.Fee] = '0.00000001'; //the only way to keep currency code in CT is to have some amount, so again decided to put 1 sat to make editing faster by having fee coin code ready
-  ctLine[ctField.FeeCurrency] = _coinCode;
-  ctLine[ctField.Comment] = `You must update the fee based on deposit amount from this withdrawal! Sent to: ${label}`;
+  ctLine[ctField.Comment] = `Please verify correct withdrawal less fee! Sent to: ${label}`;
+  csvObject.push(ctLine);
+
+  /* Margin Loss TX to represent the fee and add it to the basis */
+  ctLine = getBaseCtLine(inputRow);
+  ctLine[ctField.Type] = ctTransactionType.MarginLoss;
+  ctLine[ctField.Sell] = getDecimalPart(getAmount(inputRow));
+  ctLine[ctField.SellCurrency] = _coinCode;
+  ctLine[ctField.Comment] = `Please verify fee only when Sent to: ${label}`;
   csvObject.push(ctLine);
 }
 
@@ -282,6 +289,10 @@ function getEmptyLine() {
 
 function fpFix(n) {
   return Math.round(n * 100000000) / 100000000;
+}
+
+function getDecimalPart(decNum) {
+  return Math.round((decNum % 1) * 100000000) / 100000000;
 }
 
 function addMiningLineOrMap(inputRow, groupByDay, map, csvObject) {
