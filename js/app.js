@@ -248,6 +248,7 @@ function addDeposit(inputRow, csvObject) {
   ctLine[ctField.Type] = ctTransactionType.Deposit;
   ctLine[ctField.Buy] = getAmount(inputRow);
   ctLine[ctField.BuyCurrency] = _coinCode;
+  ctLine[ctField.TxID] = ctLine[ctField.TxID] + '-1' //CT can't have duplicated TX, this can happen when exchange and wallet report same blockchain TxID 
   csvObject.push(ctLine);
 }
 
@@ -259,6 +260,7 @@ function addWithdawalCtLine(inputRow, csvObject) {
   ctLine[ctField.Sell] = Math.trunc(getAmount(inputRow));
   ctLine[ctField.SellCurrency] = _coinCode;
   ctLine[ctField.Comment] = `Please verify correct withdrawal less fee! Sent to: ${label}`;
+  ctLine[ctField.TxID] = ctLine[ctField.TxID] + '-1' //CT can't have duplicated TX
   csvObject.push(ctLine);
 
   /* Margin Loss TX to represent the fee and add it to the basis */
@@ -267,6 +269,7 @@ function addWithdawalCtLine(inputRow, csvObject) {
   ctLine[ctField.Sell] = getDecimalPart(getAmount(inputRow));
   ctLine[ctField.SellCurrency] = _coinCode;
   ctLine[ctField.Comment] = `Please verify fee only when Sent to: ${label}`;
+  ctLine[ctField.TxID] = ctLine[ctField.TxID] + '-2' //CT can't have duplicated TX
   csvObject.push(ctLine);
 }
 
