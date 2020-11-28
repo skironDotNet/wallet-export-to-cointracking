@@ -86,20 +86,14 @@
 
 					<div>
 						<label>
-							<input type="checkbox" id="costBasisZero"> Declare mining as cost basis zero
-							<dfn>You can use this to override default type "Mining" to cost basis zero transaction, <b>but this is not recommended</b></dfn>
+							<input type="checkbox" id="costBasisZero"> Declare mining as realized capital gain
+							<dfn>You can use this to override default type "Mining" to "Margin Profit" which instructs CT to apply cost basis zero to transaction, and result in realized capital gain at the time received, <b>but this is not recommended</b></dfn>
 						</label>
 						<a class="more-details">more details</a>
 					</div>
-					<div class="explain">I most countries mining is taxable income, and if you still want to override this, you can use filter at CoinTracking Report page:<br> 
+					<div class="explain">I most countries mining is taxable income, and if you still want to override this, you can use filter at CoinTracking Report page (this will not realize gain until the asset is sold):<br> 
 						<img src="images/how-to2.png" style="border: 1px solid gray">
 					</div>
-
-					<label id="fiatUI" class="hidden">
-						Home Currency:
-						<input type="text" size="10" maxlength="3" id="homeFiatCurrency" value="USD">
-						<dfn>We need home FIAT currency to establish 0 basis in CT</dfn>
-					</label>
 
 					<div class="text-center">
 						<div class="see-results">

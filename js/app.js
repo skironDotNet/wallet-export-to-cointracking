@@ -47,7 +47,6 @@ var _coinCode = null;
 var _walletName = null;
 var _ctGroup = null;
 var _isCostBasisZero = null;
-var _homeFiatCurrency = null;
 var _file = {};
 
 $(function () {
@@ -65,10 +64,6 @@ $(function () {
     } else {
       $('.more-details').text('more details');
     }
-  });
-
-  $('#costBasisZero').change(() => {
-    $('#fiatUI').toggle($('#costBasisZero').prop('checked'));
   });
 
   $('#file').change(function () {
@@ -109,7 +104,6 @@ $(function () {
     _walletName = $('#walletName').val();
     _ctGroup = $('#ctGroup').val();
     _isCostBasisZero = $('#costBasisZero').prop('checked');
-    _homeFiatCurrency = $('#homeFiatCurrency').val();
     groupByDay = $('#groupMiningByDay').prop('checked');
 
     if (!validateInput())
@@ -300,9 +294,7 @@ function addMiningLineOrMap(inputRow, groupByDay, map, csvObject) {
   ctLine[ctField.Type] = ctTransactionType.Mining;
 
   if (_isCostBasisZero) { //this pice of code could be changed now into Margin Profit
-    ctLine[ctField.Type] = ctTransactionType.Trade;
-    ctLine[ctField.Sell] = 0;
-    ctLine[ctField.SellCurrency] = _homeFiatCurrency;
+    ctLine[ctField.Type] = ctTransactionType.MarginProfit;
   }
 
   if (groupByDay) {
@@ -334,10 +326,6 @@ function validateInput() {
   }
   if (_walletName.length == 0) {
     showError('Wallet Name is required!');
-    return false;
-  }
-  if (_homeFiatCurrency.length == 0 && _isCostBasisZero) {
-    showError('Your local currency code is required for 0 cost basis!');
     return false;
   }
   hideError();
