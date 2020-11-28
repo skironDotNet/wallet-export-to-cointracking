@@ -26,7 +26,9 @@ var ctTransactionType = {
   Stolen: 'Stolen',
   Trade: 'Trade',
   Withdrawal: 'Withdrawal',
-  Spend: 'Spend'
+  Spend: 'Spend',
+  MarginProfit: 'Margin Profit',
+  MarginLoss: 'Margin Loss',
 };
 
 var fileTypeMatch = new RegExp('^.*Confirmed,Date,Type,Label,Address,Amount.*,ID.*$', 'g');
@@ -41,16 +43,14 @@ var csvDialect = {
   header: true
 };
 
-var coinCode = null;
-var walletName = null;
-var ctGroup = null;
-var isCostBasisZero = null;
-var homeFiatCurrency = null;
-var minDataDate = null;
-var maxDataDate = null;
-var file = {};
+var _coinCode = null;
+var _walletName = null;
+var _ctGroup = null;
+var _isCostBasisZero = null;
+var _homeFiatCurrency = null;
+var _file = {};
 
-$(function() {
+$(function () {
   $('#file').val('');
   disableConvert();
   hideDownload();
@@ -71,16 +71,16 @@ $(function() {
     $('#fiatUI').toggle($('#costBasisZero').prop('checked'));
   });
 
-  $('#file').change(function() {
+  $('#file').change(function () {
     disableConvert();
     hideDownload();
     hideError();
 
-    file = this.files[0];
+    _file = this.files[0];
 
     let reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = function (e) {
       let text = reader.result;
 
       let firstLine = text.split('\n').shift(); // first line
@@ -99,42 +99,57 @@ $(function() {
       }
     };
 
-    reader.readAsText(file, 'UTF-8');
+    reader.readAsText(_file, 'UTF-8');
   });
 
-  $('#convert').click(function() {
-    coinCode = $('#coinCode')
+  $('#convert').click(function () {
+    _coinCode = $('#coinCode')
       .val()
       .toUpperCase();
-    walletName = $('#walletName').val();
-    ctGroup = $('#ctGroup').val();
-    isCostBasisZero = $('#costBasisZero').prop('checked');
-    homeFiatCurrency = $('#homeFiatCurrency').val();
+    _walletName = $('#walletName').val();
+    _ctGroup = $('#ctGroup').val();
+    _isCostBasisZero = $('#costBasisZero').prop('checked');
+    _homeFiatCurrency = $('#homeFiatCurrency').val();
     groupByDay = $('#groupMiningByDay').prop('checked');
 
-    if (!validateInput()) return;
-
-    resetDateDates();
+    if (!validateInput())
+      return;
 
     CSV.fetch({
-      file: file
-    }).done(function(dataset) {
+      file: _file
+    }).done(function (dataset) {
       //consoleconsole.log(dataset);
       let csvObject = convert(dataset, groupByDay);
       //console.log(csvObject);
       let csvData = CSV.serialize(csvObject, csvDialect);
 
       csvData = csvData.substring(0, csvData.length - csvDialect.lineTerminator.length); //remove last line, this is a fix cointracking CSV parser bug. It may introduce a bug if they change to require last empty line
-
       //console.log(csvData);
-      showDownload(getFileName(coinCode, walletName), csvData);
+
+      let dateMinMax = getDateMinMax(csvObject);
+      showDownload(getFileName(dateMinMax), csvData);
     });
   });
 });
 
-function resetDateDates() {
-  minDataDate = new Date('2199-01-01'); //I won't live longer than 2085 :)
-  maxDataDate = new Date('2000-01-01'); //crypto didn't exists before 2007
+function getDateMinMax(csvObject) {
+  min = new Date('2199-01-01'); //I won't live longer than 2085 :)
+  max = new Date('2000-01-01'); //crypto didn't exists before 2007
+  for (let i = 1; i < csvObject.length; i++) {
+    let rowDate = csvObject[i][ctField.Date];
+    let textDate = rowDate.split(' ')[0];
+    let date = new Date(textDate);
+
+    if (min > date) {
+      min = date;
+    }
+
+    if (max < date) {
+      max = date;
+    }
+  }
+
+  return { min, max };
 }
 
 function setCoinCode(coinCode) {
@@ -148,26 +163,30 @@ function convert(dataset, groupByDay) {
 
   for (i = 0; i < dataset.records.length; i++) {
     let row = dataset.records[i];
-    if (row[0] == 'false') continue;
-    let line = convertRow(row, groupByDay, map);
-    if (line) {
-      csvObject.push(line);
-    }
+
+    if (row[0] == 'false') //skip unconfirmed transactions
+      continue;
+
+    convertRow(row, groupByDay, map, csvObject);
   }
 
   if (groupByDay) {
-    for (var [key, line] of map) {
-      if (line[ctField.TxID] === '') {  //set id only if empty, this means 1+ rows in a day, otherwise keep original TxID since only 1 row that day
-        line[ctField.TxID] = getFakeTxId(line.toString(), key);
-      }
-      csvObject.push(line);
-    }
+    addFromMapToCsvObject(map, csvObject);
   }
 
   return csvObject;
 }
 
-function getFakeTxId(str, date) {
+function addFromMapToCsvObject(map, csvObject) {
+  for (var [key, line] of map) {
+    if (line[ctField.TxID] === '') {  //set id only if empty, this means 1+ rows in a day, otherwise keep original TxID since only 1 row that day
+      line[ctField.TxID] = getComputedTxId(line.toString(), key);
+    }
+    csvObject.push(line);
+  }
+}
+
+function getComputedTxId(str, date) {
   var hash = 0,
     i,
     chr;
@@ -180,87 +199,111 @@ function getFakeTxId(str, date) {
   return 'computedID:' + hash + '-' + date;
 }
 
-function convertRow(row, groupByDay, map) {
-  let ctLine = ['', '', '', '', '', '', '', '', '', '', '', ''];
+function convertRow(inputRow, groupByDay, map, csvObject) {
 
-  ctLine[ctField.Exchange] = walletName;
-  ctLine[ctField.Date] = row[1].replace('T', ' ');
-  ctLine[ctField.TxID] = row[6];
-  ctLine[ctField.Group] = ctGroup;
-
-  let date = row[1].split('T')[0];
-  let amount = row[5].replace('-', '');
-  let label = row[3];
-  let txType = row[2];
-
-  let rowDate = new Date(date);
-
-  if (minDataDate > rowDate) {
-    minDataDate = rowDate;
-  }
-
-  if (maxDataDate < rowDate) {
-    maxDataDate = rowDate;
-  }
+  let txType = inputRow[2];
 
   switch (txType.toLowerCase()) {
     case 'sent to':
-      ctLine[ctField.Type] = ctTransactionType.Withdrawal;
-      ctLine[ctField.Sell] = amount;
-      ctLine[ctField.SellCurrency] = coinCode;
-      ctLine[ctField.Fee] = '0.00000001'; //the only way to keep currency code in CT is to have some amount, so again decided to put 1 sat to make editing faster by having fee coin code ready
-      ctLine[ctField.FeeCurrency] = coinCode;
-      ctLine[ctField.Comment] = `You must update the fee based on deposit amount from this withdrawal! Sent to: ${label}`;
+      addWithdawalCtLine(inputRow, csvObject);
       break;
-    case 'minted':
+    case 'minted': //this could be wrong if minted means going PIV to ZPIV etc., so far didn't have the use case
     case 'mined':
     case 'mining':
     case 'masternode reward':
-      ctLine = formatMiningLineOrMap(ctLine, amount, date, groupByDay, map);
+      addMiningLineOrMap(inputRow, groupByDay, map, csvObject);
       break;
     case 'received with':
-      ctLine[ctField.Type] = ctTransactionType.Deposit;
-      ctLine[ctField.Buy] = amount;
-      ctLine[ctField.BuyCurrency] = coinCode;
+      addDeposit(inputRow, csvObject);
       break;
     case 'payment to yourself':
-      ctLine[ctField.Type] = ctTransactionType.Spend;
-      ctLine[ctField.Sell] = amount;
-      ctLine[ctField.SellCurrency] = coinCode;
-      ctLine[ctField.Fee] = amount;
-      ctLine[ctField.FeeCurrency] = coinCode;
-      ctLine[ctField.Comment] = 'Payment to yourself';
+      addPaymentToYourselfLoss(inputRow, csvObject);
       break;
     default:
       if (txType.toLowerCase().includes('stake')) {
-        ctLine = formatMiningLineOrMap(ctLine, amount, date, groupByDay, map);
+        addMiningLineOrMap(inputRow, groupByDay, map, csvObject);
       } else {
-        ctLine[ctField.Type] = ctTransactionType.Trade;
-        ctLine[ctField.Buy] = amount;
-        ctLine[ctField.BuyCurrency] = coinCode;
-        ctLine[ctField.Sell] = amount;
-        ctLine[ctField.SellCurrency] = coinCode;
-        ctLine[ctField.Comment] = 'Unknown type: ' + txType + ' in export file. Please revise this!';
+        addUnknown(inputRow, csvObject, txType);
       }
       break;
   }
+}
 
+function addUnknown(inputRow, csvObject, txType) {
+  let ctLine = getBaseCtLine(inputRow);
+  ctLine[ctField.Type] = ctTransactionType.Trade;
+  ctLine[ctField.Buy] = getAmount(inputRow);
+  ctLine[ctField.BuyCurrency] = _coinCode;
+  ctLine[ctField.Sell] = getAmount(inputRow);;
+  ctLine[ctField.SellCurrency] = _coinCode;
+  ctLine[ctField.Comment] = 'Unknown type: ' + txType + ' in export file. Please revise this!';
+  csvObject.push(ctLine);
+}
+
+function addPaymentToYourselfLoss(inputRow, csvObject) {
+  let ctLine = getBaseCtLine(inputRow);
+  ctLine[ctField.Type] = ctTransactionType.MarginLoss;
+  ctLine[ctField.Sell] = getAmount(inputRow);
+  ctLine[ctField.SellCurrency] = _coinCode;
+  ctLine[ctField.Comment] = 'Payment to yourself';
+  csvObject.push(ctLine);
+}
+
+function addDeposit(inputRow, csvObject) {
+  let ctLine = getBaseCtLine(inputRow);
+  ctLine[ctField.Type] = ctTransactionType.Deposit;
+  ctLine[ctField.Buy] = getAmount(inputRow);
+  ctLine[ctField.BuyCurrency] = _coinCode;
+  csvObject.push(ctLine);
+}
+
+function addWithdawalCtLine(inputRow, csvObject) {
+  let ctLine = getBaseCtLine(inputRow);
+  let label = inputRow[3];
+  ctLine[ctField.Type] = ctTransactionType.Withdrawal;
+  ctLine[ctField.Sell] = getAmount(inputRow);
+  ctLine[ctField.SellCurrency] = _coinCode;
+  ctLine[ctField.Fee] = '0.00000001'; //the only way to keep currency code in CT is to have some amount, so again decided to put 1 sat to make editing faster by having fee coin code ready
+  ctLine[ctField.FeeCurrency] = _coinCode;
+  ctLine[ctField.Comment] = `You must update the fee based on deposit amount from this withdrawal! Sent to: ${label}`;
+  csvObject.push(ctLine);
+}
+
+function getBaseCtLine(inputRow) {
+  let ctLine = getEmptyLine();
+  ctLine[ctField.Exchange] = _walletName;
+  ctLine[ctField.Date] = inputRow[1].replace('T', ' ');
+  ctLine[ctField.TxID] = inputRow[6];
+  ctLine[ctField.Group] = _ctGroup;
   return ctLine;
+}
+
+function getAmount(inputRow) {
+  return eval(inputRow[5].replace('-', ''));
+}
+
+function getEmptyLine() {
+  return ['', '', '', '', '', '', '', '', '', '', '', ''];
 }
 
 function fpFix(n) {
   return Math.round(n * 100000000) / 100000000;
 }
 
-function formatMiningLineOrMap(ctLine, amount, date, groupByDay, map) {
-  ctLine[ctField.Buy] = eval(amount);
-  ctLine[ctField.BuyCurrency] = coinCode;
+function addMiningLineOrMap(inputRow, groupByDay, map, csvObject) {
+  debugger;
+  let ctLine = getBaseCtLine(inputRow);
+  let amount = getAmount(inputRow);
+  let date = ctLine[ctField.Date].split(' ')[0];
+
+  ctLine[ctField.Buy] = amount;
+  ctLine[ctField.BuyCurrency] = _coinCode;
   ctLine[ctField.Type] = ctTransactionType.Mining;
 
-  if (isCostBasisZero) {
+  if (_isCostBasisZero) { //this pice of code could be changed now into Margin Profit
     ctLine[ctField.Type] = ctTransactionType.Trade;
     ctLine[ctField.Sell] = 0;
-    ctLine[ctField.SellCurrency] = homeFiatCurrency;
+    ctLine[ctField.SellCurrency] = _homeFiatCurrency;
   }
 
   if (groupByDay) {
@@ -271,33 +314,33 @@ function formatMiningLineOrMap(ctLine, amount, date, groupByDay, map) {
       //console.log('amount:' + amount +' eval(amount): ' + eval(amount));
       ctLine[ctField.Buy] = fpFix(ctLine[ctField.Buy] + eval(amount));
       //console.log('After sum: ' + ctLine[ctField.Buy]);
-    }
-
+    };
     map.set(date, ctLine);
-    ctLine = null;
+  }
+  else {
+    csvObject.push(ctLine);
   }
 
-  return ctLine;
 }
 
-function getFileName(coinCode, walletName) {
-  let minDate = minDataDate.toISOString().split('T')[0];
-  let maxDate = maxDataDate.toISOString().split('T')[0];
+function getFileName(dateMinMax) {
+  let minDate = dateMinMax.min.toISOString().split('T')[0];
+  let maxDate = dateMinMax.max.toISOString().split('T')[0];
 
-  let fullName = walletName + '-' + coinCode + '-to-cointracking-' + minDate + '--' + maxDate + '.csv';
+  let fullName = _walletName + '-' + _coinCode + '-to-cointracking-' + minDate + '--' + maxDate + '.csv';
   return fullName.toLowerCase();
 }
 
 function validateInput() {
-  if (coinCode.length == 0) {
+  if (_coinCode.length == 0) {
     showError('Coin Code is required!');
     return false;
   }
-  if (walletName.length == 0) {
+  if (_walletName.length == 0) {
     showError('Wallet Name is required!');
     return false;
   }
-  if (homeFiatCurrency.length == 0 && isCostBasisZero) {
+  if (_homeFiatCurrency.length == 0 && _isCostBasisZero) {
     showError('Your local currency code is required for 0 cost basis!');
     return false;
   }
