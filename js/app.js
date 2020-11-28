@@ -291,7 +291,6 @@ function fpFix(n) {
 }
 
 function addMiningLineOrMap(inputRow, groupByDay, map, csvObject) {
-  debugger;
   let ctLine = getBaseCtLine(inputRow);
   let amount = getAmount(inputRow);
   let date = ctLine[ctField.Date].split(' ')[0];
@@ -311,16 +310,13 @@ function addMiningLineOrMap(inputRow, groupByDay, map, csvObject) {
       ctLine = map.get(date);
       ctLine[ctField.Date] = date + ' 23:59:59'; //this will ovveride only if more that 1 mint a day, otherwise we keep original date for single mint
       ctLine[ctField.TxID] = ''; //reset ID to assure same hash in case of a shift in row processing
-      //console.log('amount:' + amount +' eval(amount): ' + eval(amount));
-      ctLine[ctField.Buy] = fpFix(ctLine[ctField.Buy] + eval(amount));
-      //console.log('After sum: ' + ctLine[ctField.Buy]);
+      ctLine[ctField.Buy] = fpFix(ctLine[ctField.Buy] + amount);
     };
     map.set(date, ctLine);
   }
   else {
     csvObject.push(ctLine);
   }
-
 }
 
 function getFileName(dateMinMax) {
