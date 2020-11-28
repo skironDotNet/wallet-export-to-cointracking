@@ -87,6 +87,10 @@ $(function () {
       if (firstLine.match(fileTypeMatch)) {
         enableConvert();
         let autoDetectCoinCode = firstLine.replace(/^[^(]*\(/, '').replace(/\)[^(]*$/, '');
+        if (autoDetectCoinCode == 'PIV'){
+          autoDetectCoinCode = 'PIVX';
+        }
+
         setCoinCode(autoDetectCoinCode);
       } else {
         setCoinCode('');
